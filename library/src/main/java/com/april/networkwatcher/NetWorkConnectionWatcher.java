@@ -5,6 +5,7 @@ import android.app.Application;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.os.Bundle;
@@ -39,7 +40,7 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
      */
     public interface INetWatcher {
 
-        void onNetConnectionChanged(Network network, boolean networkConnected, boolean wifiConnected);
+        void onNetConnectionChanged(Network network, boolean mobileConnected, boolean wifiConnected);
     }
 
     //==============================================================================================
@@ -57,8 +58,8 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
         return watcher;
     }
 
-    //网络连接是否可用
-    public static boolean netWorkAvailable = false;
+    //移动网络连接是否可用
+    public static boolean mobileAvailable = false;
     //wifi 连接是否可用
     public static boolean wifiAvailable = false;
     //可以添加一些其他链接方式的判定值……
@@ -88,8 +89,8 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
         if (manager != null) {
             manager.requestNetwork(new NetworkRequest.Builder().build(), callback);
         }
-        netWorkAvailable = checkNetworkConnected();
-        wifiAvailable = checkWifiConnected();
+        mobileAvailable = checkMobileAvailable();
+        wifiAvailable = checkWifiAvailable();
         //注册生命周期回调
         application.registerActivityLifecycleCallbacks(this);
         lifecycle = new FragmentLifecycle();
@@ -116,41 +117,71 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
      * 网络连接变化
      */
     private void onNetWorkChanged(Network network) {
-        checkNetworkConnected();
-        checkWifiConnected();
+        mobileAvailable = checkMobileAvailable();
+        wifiAvailable = checkWifiConnected(network);
         for (INetWatcher listener : listenerList) {
             if (listener != null) {
-                listener.onNetConnectionChanged(network, netWorkAvailable, wifiAvailable);
+                listener.onNetConnectionChanged(
+                        network, mobileAvailable, wifiAvailable
+                );
             }
         }
     }
 
     //==============================================================================================
 
+    // TODO: 2019/3/14  差一个通过 Network 检测移动网络是否可用的函数
+
+    /**
+     * @return wifi 网络是否已连接
+     */
+    private boolean checkWifiConnected(Network network) {
+        if (manager != null) {
+            NetworkCapabilities capabilities = manager.getNetworkCapabilities(network);
+            if (capabilities != null) {
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+            }
+        }
+        return false;
+    }
+
     /**
      * @return 检查网络是否可用
      */
-    public boolean checkNetworkConnected() {
+    public boolean checkMobileAvailable() {
         if (manager != null) {
-            NetworkInfo info = manager.getActiveNetworkInfo();
+            NetworkInfo info = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
             if (info != null) {
-                return netWorkAvailable = info.isConnected();
+                return info.isConnected();
             }
         }
-        return netWorkAvailable = false;
+        return false;
     }
 
     /**
      * @return 检查 wifi 是否可用
      */
-    public boolean checkWifiConnected() {
+    public boolean checkWifiAvailable() {
         if (manager != null) {
             NetworkInfo info = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
             if (info != null) {
-                return wifiAvailable = info.isConnected();
+                return info.isConnected();
             }
         }
-        return wifiAvailable = false;
+        return false;
+    }
+
+    /**
+     * @return 网络是否连接
+     */
+    public boolean checkNetworkConnected() {
+        if (manager != null) {
+            NetworkInfo info = manager.getActiveNetworkInfo();
+            if (info != null) {
+                return info.isConnected();
+            }
+        }
+        return false;
     }
 
     /**
