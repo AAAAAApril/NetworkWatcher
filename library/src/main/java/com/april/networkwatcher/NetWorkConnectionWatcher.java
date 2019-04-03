@@ -211,6 +211,9 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
     }
 
     /**
+     * 注意：SSID 值是自带双引号的，
+     * 比如，正常我们认为一个字符串是指："name"，name 为 WiFi 名称，则这个 SSID 返回的值是：""name""
+     *
      * @return 正在连接的 wifi 名称
      */
     @Nullable
