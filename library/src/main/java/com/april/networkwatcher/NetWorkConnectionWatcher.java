@@ -8,6 +8,8 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -206,6 +208,21 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
         if (listenerList.contains(netWatcher)) {
             listenerList.remove(netWatcher);
         }
+    }
+
+    /**
+     * @return 正在连接的 wifi 名称
+     */
+    @Nullable
+    public String getConnectedWifiName() {
+        WifiManager wifiManager = (WifiManager) application.getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager != null) {
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            if (wifiInfo != null) {
+                return wifiInfo.getSSID();
+            }
+        }
+        return null;
     }
 
     //==============================================================================================
