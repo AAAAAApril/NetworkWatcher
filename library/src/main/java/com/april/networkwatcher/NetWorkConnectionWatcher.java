@@ -11,6 +11,8 @@ import android.net.NetworkRequest;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -41,7 +43,11 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
      * 不要忘记调用 {@link #removeNetWatcher(INetWatcher)}
      */
     public interface INetWatcher {
-
+        /**
+         * @param network         网络信息
+         * @param mobileConnected 移动网络是否可用
+         * @param wifiConnected   WiFi 网络是否可用
+         */
         void onNetConnectionChanged(Network network, boolean mobileConnected, boolean wifiConnected);
     }
 
@@ -118,16 +124,21 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
     /**
      * 网络连接变化
      */
-    private void onNetWorkChanged(Network network) {
+    private void onNetWorkChanged(final Network network) {
         mobileAvailable = checkMobileAvailable();
         wifiAvailable = checkWifiConnected(network);
-        for (INetWatcher listener : listenerList) {
-            if (listener != null) {
-                listener.onNetConnectionChanged(
-                        network, mobileAvailable, wifiAvailable
-                );
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                for (INetWatcher listener : listenerList) {
+                    if (listener != null) {
+                        listener.onNetConnectionChanged(
+                                network, mobileAvailable, wifiAvailable
+                        );
+                    }
+                }
             }
-        }
+        });
     }
 
     //==============================================================================================
@@ -232,12 +243,14 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
 
     //app
     private Application application;
+    private Handler handler;
 
     /**
      * 构造函数
      */
     private NetWorkConnectionWatcher(Application application) {
         this.application = application;
+        handler = new Handler(Looper.getMainLooper());
         init();
     }
 
@@ -291,11 +304,7 @@ public final class NetWorkConnectionWatcher implements Application.ActivityLifec
 
     @Override
     public void onActivityDestroyed(Activity activity) {
-        if (activity instanceof FragmentActivity) {
-            ((FragmentActivity) activity)
-                    .getSupportFragmentManager()
-                    .unregisterFragmentLifecycleCallbacks(lifecycle);
-        }
+
     }
 
     //==============================================================================================
